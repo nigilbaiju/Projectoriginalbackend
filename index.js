@@ -2,14 +2,23 @@
 const express=require("express")
 const cors=require("cors")
 const mongoose=require("mongoose")
+const multer = require('multer');
 
 //Initailizing
 const app=new express();
 const categorymodel = require('./model/category')
+const itemmodel = require('./model/item')
+const ImageModel = require('./model/image')
+
+const storage = multer.memoryStorage(); // Store images in memory
+const upload = multer({ storage: storage });
 
 app.use(express.urlencoded({extended:true}))
 app.use(express.json());
 app.use(cors());
+
+
+
 
 
 //Api Creation
@@ -17,7 +26,7 @@ app.get('/',(request,response)=>{
     response.send("hai")
 })
 
-//For Submit button
+//For Category
 app.post('/cnew',(request,response)=>{
         console.log(request.body)
         new categorymodel(request.body).save();
@@ -52,11 +61,65 @@ app.delete('/deletec/:id',async(request,response) => {
     await categorymodel.findByIdAndDelete(id)
     response.send("Record Deleted")
 })
+
+
+app.put('/updatestatus/:id',async(request,response) => {
+    let id = request.params.id;
+    await categorymodel.findByIdAndUpdate(id,       
+      { $set: { status: "INACTIVE" } })
+    response.send("Status updated")
+})
+
+
 app.put('/cedit/:id',async(request,response) => {
     let id = request.params.id;
     await categorymodel.findByIdAndUpdate(id,request.body)
     response.send("Record updated")
 })
+
+//For item
+
+// app.post('/itemnew',(request,response)=>{
+//   console.log(request.body)
+//   new itemmodel(request.body).save();
+//   response.send("Record Sucessfully Saved")
+// })
+
+app.post('/itemimagenew', upload.single('image'), async (req, res) => {
+  try {
+    const { icode,iname,cid,status } = req.body;
+
+    const newitem = new itemmodel({
+      icode,
+      iname,
+      cid,
+      image: {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      },
+      status
+    });
+
+    await newitem.save();
+    res.status(200).json({ message: 'Item added successfully' });
+  } 
+  catch (error) {
+    console.error('Error uploading product:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
+app.post('/upload', upload.single('image'), async (req, res) => {
+  const image = req.file.buffer;
+  const newImage = new ImageModel({
+    data: image,
+    contentType: req.file.mimetype,
+  });
+  await newImage.save();
+  res.status(200).json({ message: 'Image uploaded successfully' });
+});
 
 //Assign Port 
 app.listen(3005,(request,response)=>{
