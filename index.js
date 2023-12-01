@@ -8,7 +8,7 @@ const multer = require('multer');
 const app=new express();
 const categorymodel = require('./model/category')
 const itemmodel = require('./model/item')
-const ImageModel = require('./model/image')
+
 
 const storage = multer.memoryStorage(); // Store images in memory
 const upload = multer({ storage: storage });
@@ -16,9 +16,6 @@ const upload = multer({ storage: storage });
 app.use(express.urlencoded({extended:true}))
 app.use(express.json());
 app.use(cors());
-
-
-
 
 
 //Api Creation
@@ -37,6 +34,7 @@ app.get('/cview',async(request,response) => {
     var data = await categorymodel.find();
     response.send(data)
 })
+
 
 
 const Item = mongoose.model('Categories', { cname: String });
@@ -65,8 +63,7 @@ app.delete('/deletec/:id',async(request,response) => {
 
 app.put('/updatestatus/:id',async(request,response) => {
     let id = request.params.id;
-    await categorymodel.findByIdAndUpdate(id,       
-      { $set: { status: "INACTIVE" } })
+    await categorymodel.findByIdAndUpdate(id, { $set: { status: "INACTIVE" } })
     response.send("Status updated")
 })
 
@@ -79,11 +76,6 @@ app.put('/cedit/:id',async(request,response) => {
 
 //For item
 
-// app.post('/itemnew',(request,response)=>{
-//   console.log(request.body)
-//   new itemmodel(request.body).save();
-//   response.send("Record Sucessfully Saved")
-// })
 
 app.post('/itemimagenew', upload.single('image'), async (req, res) => {
   try {
@@ -110,17 +102,30 @@ app.post('/itemimagenew', upload.single('image'), async (req, res) => {
 });
 
 
+//For itemview
 
-app.post('/upload', upload.single('image'), async (req, res) => {
-  const image = req.file.buffer;
-  const newImage = new ImageModel({
-    data: image,
-    contentType: req.file.mimetype,
-  });
-  await newImage.save();
-  res.status(200).json({ message: 'Image uploaded successfully' });
-});
+app.get('/itemview',async(request,response) => {
 
+    const result = await itemmodel.aggregate([
+      {
+        $lookup: {
+          from: 'categories', // Name of the other collection
+          localField: 'cid', // field of item
+          foreignField: '_id', //field of category
+          as: 'cat',
+        },
+      },
+    ]); 
+
+    response.send(result)
+})
+
+//For item Status updation - Delete
+app.put('/updatestatusitem/:id',async(request,response) => {
+  let id = request.params.id;
+  await itemmodel.findByIdAndUpdate(id, { $set: { status: "INACTIVE" } })
+  response.send("Status updated")
+})
 //Assign Port 
 app.listen(3005,(request,response)=>{
     console.log("Port is running in 3005")
